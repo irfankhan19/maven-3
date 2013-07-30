@@ -19,10 +19,7 @@ package org.apache.maven.model.building;
  * under the License.
  */
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URI;
 
 /**
@@ -52,7 +49,8 @@ public class FileModelSource
     public InputStream getInputStream()
         throws IOException
     {
-        return new FileInputStream( pomFile );
+        FileInputStream fileInputStream = new FileInputStream(pomFile);
+        return new BufferedInputStream( fileInputStream, 32768);
     }
 
     public String getLocation()
