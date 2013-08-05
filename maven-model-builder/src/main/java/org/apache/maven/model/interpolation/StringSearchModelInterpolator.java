@@ -282,43 +282,58 @@ public class StringSearchModelInterpolator
         {
             protected final Field field;
 
+            private final boolean accessible;
+
             CacheField( Field field )
             {
                 this.field = field;
+                accessible = field.isAccessible();
             }
 
             void interpolate( Object target, InterpolateObjectAction interpolateObjectAction )
             {
-                synchronized ( field )
+                if ( !accessible )
                 {
-                    boolean isAccessible = field.isAccessible();
-                    field.setAccessible( true );
-                    try
+                    synchronized ( field )
                     {
-                        doInterpolate( target, interpolateObjectAction );
-                    }
-                    catch ( IllegalArgumentException e )
-                    {
-                        interpolateObjectAction.problems.add(
-                            new ModelProblemCollectorRequest( Severity.ERROR, Version.BASE ).setMessage(
-                                "Failed to interpolate field3: " + field + " on class: "
-                                    + field.getType().getName() ).setException(
-                                e ) ); // todo: Not entirely the same message
-                    }
-                    catch ( IllegalAccessException e )
-                    {
-                        interpolateObjectAction.problems.add(
-                            new ModelProblemCollectorRequest( Severity.ERROR, Version.BASE ).setMessage(
-                                "Failed to interpolate field4: " + field + " on class: "
-                                    + field.getType().getName() ).setException( e ) );
-                    }
-                    finally
-                    {
-                        field.setAccessible( isAccessible );
+                        try
+                        {
+                            field.setAccessible( true );
+                            unsynchronizedInterpolate( target, interpolateObjectAction );
+                        }
+                        finally
+                        {
+                            field.setAccessible( false );
+                        }
                     }
                 }
+                else
+                {
+                    unsynchronizedInterpolate( target, interpolateObjectAction );
+                }
+            }
 
-
+            private void unsynchronizedInterpolate( Object target, InterpolateObjectAction interpolateObjectAction )
+            {
+                try
+                {
+                    doInterpolate( target, interpolateObjectAction );
+                }
+                catch ( IllegalArgumentException e )
+                {
+                    interpolateObjectAction.problems.add(
+                        new ModelProblemCollectorRequest( Severity.ERROR, Version.BASE ).setMessage(
+                            "Failed to interpolate field3: " + field + " on class: "
+                                + field.getType().getName() ).setException(
+                            e ) ); // todo: Not entirely the same message
+                }
+                catch ( IllegalAccessException e )
+                {
+                    interpolateObjectAction.problems.add(
+                        new ModelProblemCollectorRequest( Severity.ERROR, Version.BASE ).setMessage(
+                            "Failed to interpolate field4: " + field + " on class: "
+                                + field.getType().getName() ).setException( e ) );
+                }
             }
 
             abstract void doInterpolate( Object target, InterpolateObjectAction ctx )
